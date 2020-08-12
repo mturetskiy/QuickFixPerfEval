@@ -9,6 +9,8 @@ import ru.home.mtur.quickfix.common.MsgHolder;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static ru.home.mtur.quickfix.utils.ConcurrentUtils.shutdownThreadPool;
+
 public class MsgProcessor {
     final Logger log = LoggerFactory.getLogger(MsgProcessor.class);
 
@@ -17,6 +19,7 @@ public class MsgProcessor {
 
     private LinkedBlockingQueue<MsgHolder> queue;
     private ExecutorService pool;
+    private ScheduledExecutorService periodicPool;
     private volatile boolean isActive = false;
 
     public MsgProcessor() {
@@ -29,6 +32,8 @@ public class MsgProcessor {
                 return new Thread(r, "MsgProcessorWorker-" + nextId);
             }
         });
+
+        periodicPool = Executors.newScheduledThreadPool(1, r -> new Thread(r, "MsgProcessor Scheduled"));
     }
 
     public void offerMessage(SessionID sessionID, Message msg) {
@@ -42,35 +47,36 @@ public class MsgProcessor {
     public void start() {
         isActive = true;
 
-        while (isActive)  {
-            try {
-                log.info("Waiting for some message from the queue for processing ...");
-                MsgHolder msg = queue.take();
-                processMessage(msg);
-            } catch (InterruptedException e) {
-                log.warn("Interrupted ...", e);
-                Thread.currentThread().interrupt();
+        periodicPool.scheduleWithFixedDelay(() -> {
+            log.info("Incoming queue size: {}", getQueueSize());
+        }, 0, 1000, TimeUnit.MILLISECONDS);
+
+        pool.submit(() -> {
+            log.info("Msg processor worker has been [started].");
+            while (isActive)  {
+                try {
+                    log.info("Waiting for some message from the queue for processing ...");
+                    MsgHolder msg = queue.take();
+                    processMessage(msg);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
             }
-        }
+
+            log.info("{} has been [stopped].", Thread.currentThread().getName());
+        });
+
+        log.info("Message processor has been [started] with {} active workers.", WORKER_THREAD_NUM);
     }
 
     public void stop() {
         log.info("Stopping MsgProcessor");
-        pool.shutdown();
-        try {
-            if (!pool.awaitTermination(SHUTDOWN_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
-                pool.shutdownNow();
-                if (!pool.awaitTermination(SHUTDOWN_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
-                    log.error("Not all submitted tasks were terminated within {} ms.", SHUTDOWN_TIMEOUT_MS);
-                }
-            }
-        } catch (InterruptedException e) {
-            pool.shutdownNow();
-            Thread.currentThread().interrupt();
-        } finally {
-            isActive = false;
-            log.info("MsgProcessor has been stopped.");
-        }
+        isActive = false;
+
+        shutdownThreadPool(pool, "Workers pool", SHUTDOWN_TIMEOUT_MS);
+        shutdownThreadPool(periodicPool, "Scheduling pool", SHUTDOWN_TIMEOUT_MS);
+
+        log.info("MsgProcessor has been [stopped].");
     }
 
     public int getQueueSize() {

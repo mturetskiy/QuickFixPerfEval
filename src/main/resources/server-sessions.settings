@@ -3,3 +3,8 @@ ConnectionType=acceptor
 SocketAcceptPort=15600
 SocketAcceptAddress=localhost
 BeginString=FIX.4.4
+SenderCompID=QF_SRV
+
+[session]
+AcceptorTemplate=Y
+TargetCompID=*
