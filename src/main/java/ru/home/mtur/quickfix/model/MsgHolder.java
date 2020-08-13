@@ -1,4 +1,4 @@
-package ru.home.mtur.quickfix.common;
+package ru.home.mtur.quickfix.model;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

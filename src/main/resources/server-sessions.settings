@@ -5,6 +5,8 @@ SocketAcceptAddress=localhost
 BeginString=FIX.4.4
 SenderCompID=QF_SRV
 
+NonStopSession=Y
+
 [session]
 AcceptorTemplate=Y
 TargetCompID=*
