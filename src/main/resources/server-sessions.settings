@@ -6,6 +6,7 @@ BeginString=FIX.4.4
 SenderCompID=QF_SRV
 
 NonStopSession=Y
+ReconnectInterval=5
 
 [session]
 AcceptorTemplate=Y

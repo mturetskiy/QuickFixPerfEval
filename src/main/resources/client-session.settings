@@ -11,6 +11,7 @@ TargetCompID=QF_SRV
 NonStopSession=Y
 
 ResetOnLogon=Y
+ReconnectInterval=5
 
 
 

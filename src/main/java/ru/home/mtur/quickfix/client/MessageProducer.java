@@ -77,7 +77,7 @@ public class MessageProducer implements SessionStateListener {
                             TimeUnit.MILLISECONDS.sleep(MSG_NOTSENT_DELAY_MS);
                         }
 
-                        TimeUnit.MILLISECONDS.sleep(MSG_DELAY_MS);
+//                        TimeUnit.MILLISECONDS.sleep(MSG_DELAY_MS);
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                     }

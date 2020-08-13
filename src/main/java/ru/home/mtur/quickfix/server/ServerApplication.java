@@ -55,7 +55,7 @@ public class ServerApplication implements ApplicationExtended {
 
     @Override
     public void fromApp(Message message, SessionID sessionId) throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType {
-        log.info("Incoming message at sessionID: {}, msg: {}", sessionId, message);
+//        log.info("Incoming message at sessionID: {}, msg: {}", sessionId, message);
         processor.offerMessage(sessionId, message);
     }
 }

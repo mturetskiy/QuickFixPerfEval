@@ -7,7 +7,7 @@ import quickfix.SessionID;
 import ru.home.mtur.quickfix.model.MsgHolder;
 
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static ru.home.mtur.quickfix.utils.ConcurrentUtils.createNamedPool;
 import static ru.home.mtur.quickfix.utils.ConcurrentUtils.shutdownThreadPool;
@@ -22,6 +22,12 @@ public class MessageProcessor {
     private ExecutorService pool;
     private ScheduledExecutorService periodicPool;
     private volatile boolean isActive = false;
+
+    private AtomicLong processedMsgCount = new AtomicLong();
+
+    // For stats calc:
+    private AtomicLong lastMeasureTimePoint = new AtomicLong();
+    private AtomicLong lastProcessedMsgCount = new AtomicLong();
 
     public MessageProcessor() {
         queue = new LinkedBlockingQueue<>();
@@ -39,9 +45,27 @@ public class MessageProcessor {
 
     public void start() {
         isActive = true;
+        lastMeasureTimePoint.set(System.currentTimeMillis());
 
         periodicPool.scheduleWithFixedDelay(() -> {
-            log.info("Incoming queue size: {}", getQueueSize());
+//            log.info("Incoming queue size: {}", getQueueSize());
+
+            // Calc msg processing speed:
+            
+            long currentTimePoint = System.currentTimeMillis();
+            long currentProcessedMsgCount = processedMsgCount.get();
+            long prevTimePoint = lastMeasureTimePoint.getAndSet(currentTimePoint);
+            long prevProcessedMsgCount = lastProcessedMsgCount.getAndSet(currentProcessedMsgCount);
+
+            long elapsedTimeMs = currentTimePoint - prevTimePoint;
+            long processed = currentProcessedMsgCount - prevProcessedMsgCount;
+            double processingRate = (double) processed / elapsedTimeMs * 1000.0;
+
+            log.info("Processed msgs: {}. Message processing rate: {} m/s", currentProcessedMsgCount, (float)processingRate);
+
+
+
+
         }, 0, 1000, TimeUnit.MILLISECONDS);
 
         pool.submit(() -> {
@@ -77,6 +101,7 @@ public class MessageProcessor {
     }
 
     private void processMessage(MsgHolder msg) throws InterruptedException {
+        processedMsgCount.incrementAndGet();
         log.info("Processing message: msgID: {}, session: {}, seqNum: {}", msg.getMsgId(), msg.getSessionID(), msg.getMsgSeq());
 //        TimeUnit.MICROSECONDS.sleep(500);
     }

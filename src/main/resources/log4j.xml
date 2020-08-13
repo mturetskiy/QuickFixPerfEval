@@ -13,7 +13,13 @@
         <level value="INFO"/>
     </logger>
     <logger name="org.apache.mina">
-        <level value="INFO"/>
+        <level value="WARN"/>
+    </logger>
+    <logger name="quickfixj.msg.incoming">
+        <level value="WARN"/>
+    </logger>
+    <logger name="quickfixj.msg.outgoing">
+        <level value="WARN"/>
     </logger>
 
     <root>
