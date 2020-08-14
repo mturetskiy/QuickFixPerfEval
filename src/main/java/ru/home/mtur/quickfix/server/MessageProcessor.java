@@ -16,7 +16,6 @@ public class MessageProcessor {
     final Logger log = LoggerFactory.getLogger(MessageProcessor.class);
 
     private final int WORKER_THREAD_NUM = 1;
-    private final long SHUTDOWN_TIMEOUT_MS = 10_000;
 
     private LinkedBlockingQueue<MsgHolder> queue;
     private ExecutorService pool;
@@ -101,8 +100,10 @@ public class MessageProcessor {
     }
 
     private void processMessage(MsgHolder msg) throws InterruptedException {
-        processedMsgCount.incrementAndGet();
-        log.info("Processing message: msgID: {}, session: {}, seqNum: {}", msg.getMsgId(), msg.getSessionID(), msg.getMsgSeq());
+        long currentMsgNum = processedMsgCount.getAndIncrement();
+        if (currentMsgNum % 10_000 == 0) {
+            log.info("Processing message: msgID: {}, session: {}, seqNum: {}", msg.getMsgId(), msg.getSessionID(), msg.getMsgSeq());
+        }
 //        TimeUnit.MICROSECONDS.sleep(500);
     }
 }

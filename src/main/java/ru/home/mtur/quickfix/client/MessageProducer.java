@@ -6,6 +6,8 @@ import quickfix.*;
 import ru.home.mtur.quickfix.model.MsgHolder;
 import ru.home.mtur.quickfix.utils.FixUtils;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -17,10 +19,7 @@ public class MessageProducer implements SessionStateListener {
 
     private final int SENDER_THREADS = 1;
     private final int MSG_GEN_THREADS = 1;
-    private final int MSG_DELAY_MS = 100;
-    private final int MSG_NOTSENT_DELAY_MS = 5_000;
-    private final int SESSION_NOT_READY_TIMEOUT = 1_000;
-    private final int MSG_QUEUE_CAPACITY = 10_000;
+    private final int MSG_QUEUE_CAPACITY = 1_000;
 
     private LinkedBlockingQueue<MsgHolder> sendingQueue;
     private ExecutorService senderPool;
@@ -28,9 +27,10 @@ public class MessageProducer implements SessionStateListener {
     private ScheduledExecutorService periodicPool;
 
     private SessionID sessionID;
-    private volatile boolean sessionIsActive = false;
     private volatile boolean isActive = false;
     private AtomicLong nextMsgID = new AtomicLong();
+
+    private List<SenderTask> senderTasks = new ArrayList<>();
 
     public MessageProducer(SessionID sessionID) {
         this.sessionID = sessionID;
@@ -59,32 +59,9 @@ public class MessageProducer implements SessionStateListener {
 
     private void startSenders() {
         for (int i = 0; i < SENDER_THREADS; i++) {
-            senderPool.submit(() -> {
-                String name = Thread.currentThread().getName();
-                log.info("{} has been [started].", name);
-                while (isActive)  {
-                    try {
-                        if (!sessionIsActive) {
-                            TimeUnit.MILLISECONDS.sleep(SESSION_NOT_READY_TIMEOUT);
-                            continue;
-                        }
-
-//                        log.info("Waiting for some message from the queue for sending ...");
-                        MsgHolder msg = sendingQueue.take();
-                        if (!sendMessage(msg)) {
-                            log.warn("Message ID={} was not sent. Return to the queue and wait for {} ms", msg.getMsgId(), MSG_NOTSENT_DELAY_MS);
-                            sendingQueue.offer(msg);
-                            TimeUnit.MILLISECONDS.sleep(MSG_NOTSENT_DELAY_MS);
-                        }
-
-//                        TimeUnit.MILLISECONDS.sleep(MSG_DELAY_MS);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                }
-
-                log.info("{} has been [stopped].", name);
-            });
+            SenderTask task = new SenderTask(sendingQueue);
+            senderTasks.add(task);
+            senderPool.submit(task);
         }
     }
 
@@ -97,7 +74,10 @@ public class MessageProducer implements SessionStateListener {
                     try {
                         MsgHolder msg = generateMessage(sessionID);
                         sendingQueue.offer(msg, Long.MAX_VALUE, TimeUnit.MILLISECONDS);
-                        log.info("Added msg {} to the queue.", msg.getMsgId());
+                        long msgId = msg.getMsgId();
+                        if (msgId % 10_000 == 0) {
+                            log.info("[{}] Added msg {} to the queue. Queue size: {}", name, msgId, sendingQueue.size());
+                        }
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                     }
@@ -111,6 +91,7 @@ public class MessageProducer implements SessionStateListener {
     public void stop() {
         log.info("Stopping Message producer");
         isActive = false;
+        senderTasks.forEach(t -> t.setActive(false));
 
         shutdownThreadPool(senderPool, "Senders pool");
         shutdownThreadPool(periodicPool, "Scheduling pool");
@@ -128,15 +109,7 @@ public class MessageProducer implements SessionStateListener {
         return new MsgHolder(sessionID, message);
     }
 
-    private boolean sendMessage(MsgHolder msgHolder) {
-        try {
-            SessionID sessionID = msgHolder.getSessionID();
-            return Session.sendToTarget(msgHolder.getMsg(), sessionID);
-        } catch (SessionNotFound e) {
-            log.info("Session {} not found", sessionID, e);
-            return false;
-        }
-    }
+
 
     @Override
     public void onConnect() {
@@ -146,19 +119,19 @@ public class MessageProducer implements SessionStateListener {
 
     @Override
     public void onDisconnect() {
-        sessionIsActive = false;
+        senderTasks.forEach(t -> t.setSessionActive(false));
         log.info("Session [{}] disconnected.", sessionID);
     }
 
     @Override
     public void onLogon() {
         log.info("Session [{}] logged on.", sessionID);
-        sessionIsActive = true;
+        senderTasks.forEach(t -> t.setSessionActive(true));
     }
 
     @Override
     public void onLogout() {
-        sessionIsActive = false;
+        senderTasks.forEach(t -> t.setSessionActive(false));
         log.info("Session [{}] logged out.", sessionID);
     }
 
