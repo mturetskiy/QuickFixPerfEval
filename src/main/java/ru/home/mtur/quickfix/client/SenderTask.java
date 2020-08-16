@@ -45,15 +45,15 @@ public class SenderTask implements Runnable {
         sentMessages = registry.counter("sentMessages");
 
         sendTimer = Timer.builder("sendingTime")
-                .percentilePrecision(4)
+                .percentilePrecision(2)
                 .publishPercentiles(0.5, 0.95, 0.99)
                 .register(registry);
         waitTimer = Timer.builder("waitingTime")
-                .percentilePrecision(4)
+                .percentilePrecision(2)
                 .publishPercentiles(0.5, 0.95, 0.99)
                 .register(registry);
         totalTimer = Timer.builder("totalTime")
-                .percentilePrecision(4)
+                .percentilePrecision(2)
                 .publishPercentiles(0.5, 0.95, 0.99)
                 .register(registry);
 

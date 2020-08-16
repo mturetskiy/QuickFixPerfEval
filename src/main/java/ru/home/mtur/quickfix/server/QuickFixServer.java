@@ -25,7 +25,8 @@ public class QuickFixServer {
 
         SessionSettings settings = ConfigUtils.loadSessionSettings(configFileName);
 
-        MessageStoreFactory storeFactory = new MemoryStoreFactory();
+//        MessageStoreFactory storeFactory = new MemoryStoreFactory();
+        MessageStoreFactory storeFactory = new JdbcStoreFactory(settings);
         LogFactory logFactory = new SLF4JLogFactory(settings);
         MessageFactory messageFactory = new DefaultMessageFactory();
 

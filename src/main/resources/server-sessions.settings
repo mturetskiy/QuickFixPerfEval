@@ -5,6 +5,12 @@ SocketAcceptAddress=localhost
 BeginString=FIX.4.4
 SenderCompID=QF_SRV
 
+JdbcDriver=org.postgresql.Driver
+JdbcURL=jdbc:postgresql://127.0.0.1:5432/quickfix-server
+JdbcUser=qfuser
+JdbcPassword=qfuser
+
+
 NonStopSession=Y
 ReconnectInterval=5
 
