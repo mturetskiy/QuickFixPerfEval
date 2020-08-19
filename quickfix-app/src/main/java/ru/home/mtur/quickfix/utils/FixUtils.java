@@ -3,7 +3,6 @@ package ru.home.mtur.quickfix.utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import quickfix.Message;
-import quickfix.SessionID;
 import quickfix.field.*;
 import quickfix.fix44.NewOrderSingle;
 
