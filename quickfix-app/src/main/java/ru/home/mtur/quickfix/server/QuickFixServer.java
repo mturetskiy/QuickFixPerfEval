@@ -5,10 +5,12 @@ import org.slf4j.LoggerFactory;
 import quickfix.*;
 import quickfix.mina.acceptor.AbstractSocketAcceptor;
 import quickfix.mina.acceptor.DynamicAcceptorSessionProvider;
+import ru.home.mtur.quickfix.store.KafkaStoreFactory;
 import ru.home.mtur.quickfix.utils.ConfigUtils;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Properties;
 
 import static quickfix.Acceptor.SETTING_SOCKET_ACCEPT_ADDRESS;
 import static quickfix.Acceptor.SETTING_SOCKET_ACCEPT_PORT;
@@ -18,15 +20,18 @@ public class QuickFixServer {
 
     private MessageProcessor processor;
     private AbstractSocketAcceptor acceptor;
+    private String kafkaSettingsFileName = "/kafka-store.properties";
 
     public QuickFixServer(String configFileName) throws ConfigError, FieldConvertError {
         this.processor = new MessageProcessor();
         Application application = new ServerApplication(processor);
 
         SessionSettings settings = ConfigUtils.loadSessionSettings(configFileName);
+        Properties kafkaClientProps = ConfigUtils.loadProperties(kafkaSettingsFileName);
 
 //        MessageStoreFactory storeFactory = new MemoryStoreFactory();
-        MessageStoreFactory storeFactory = new JdbcStoreFactory(settings);
+//        MessageStoreFactory storeFactory = new JdbcStoreFactory(settings);
+        MessageStoreFactory storeFactory = new KafkaStoreFactory(settings, kafkaClientProps);
         LogFactory logFactory = new SLF4JLogFactory(settings);
         MessageFactory messageFactory = new DefaultMessageFactory();
 
