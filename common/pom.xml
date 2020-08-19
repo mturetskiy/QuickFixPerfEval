@@ -9,15 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>quickfix-app</artifactId>
-
-    <dependencies>
-        <dependency>
-            <groupId>ru.home.mtur</groupId>
-            <artifactId>common</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-    </dependencies>
+    <artifactId>common</artifactId>
 
 
 </project>
