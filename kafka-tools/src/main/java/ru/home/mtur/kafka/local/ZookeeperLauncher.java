@@ -40,8 +40,6 @@ public class ZookeeperLauncher {
         String appConfigName = getAppConfig(args, DEFAULT_CONFIG_NAME);
         ZookeeperLauncher launcher = new ZookeeperLauncher(appConfigName);
         launcher.start();
-
-
     }
 
     public void start() {

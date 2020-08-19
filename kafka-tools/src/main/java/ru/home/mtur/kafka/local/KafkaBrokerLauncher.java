@@ -1,11 +1,8 @@
 package ru.home.mtur.kafka.local;
 
-import kafka.admin.AdminUtils;
 import kafka.metrics.KafkaMetricsReporter;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
-import org.apache.kafka.clients.admin.AdminClient;
-import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.common.utils.SystemTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,9 +25,7 @@ public class KafkaBrokerLauncher {
     static final Logger log = LoggerFactory.getLogger(KafkaBrokerLauncher.class);
 
     public static final String DEFAULT_CONFIG_NAME = "/kafka-broker-conf.properties";
-    public static final String DEFAULT_TOPIC_NAME = "qf-topic";
     private KafkaServer server;
-    private AdminClient adminClient;
 
     public KafkaBrokerLauncher(String confFileName) {
         Properties properties = loadProperties(confFileName);
@@ -40,7 +35,6 @@ public class KafkaBrokerLauncher {
         List<KafkaMetricsReporter> reportersList = new ArrayList<>();
         Seq<KafkaMetricsReporter> reportersSeq = JavaConverters.asScalaBufferConverter(reportersList).asScala();
         server = new KafkaServer(kafkaConfig, new SystemTime(), Option.apply("Kaffka"), reportersSeq);
-        adminClient = AdminClient.create(properties);
 
         log.info("Kafka broker has been configured");
     }
@@ -71,14 +65,9 @@ public class KafkaBrokerLauncher {
 
     public void start() {
         server.startup();
-
-        log.info("Creating topic: {}", DEFAULT_TOPIC_NAME);
-        NewTopic topic = new NewTopic(DEFAULT_TOPIC_NAME, 1, (short) 1);
-        adminClient.createTopics(List.of(topic));
     }
 
     public void stop() {
-        adminClient.close();
         server.shutdown();
     }
 }

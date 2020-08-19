@@ -14,6 +14,8 @@ import static ru.home.mtur.quickfix.utils.ConfigUtils.getDefaultSessionID;
 
 public class OneSessionQuickFixClient {
     static final Logger log = LoggerFactory.getLogger(OneSessionQuickFixClient.class);
+
+    public static final String DEFAULT_CONFIG_NAME = "/client-session.settings";
     private static AtomicInteger nextClientID = new AtomicInteger();
 
     private SocketInitiator initiator;
@@ -48,14 +50,7 @@ public class OneSessionQuickFixClient {
     }
 
     public static void main(String[] args) throws ConfigError, InterruptedException {
-        if (args.length != 1) {
-            log.error("One argument with quickFix session settings config is required.");
-            return;
-        }
-
-        String configFileName = args[0];
-        log.info("Starting QuickFix client with config: {}", configFileName);
-
+        String configFileName = ConfigUtils.getAppConfig(args, DEFAULT_CONFIG_NAME);
         OneSessionQuickFixClient client = new OneSessionQuickFixClient(configFileName);
         Runtime.getRuntime().addShutdownHook(new Thread(client::stop));
 

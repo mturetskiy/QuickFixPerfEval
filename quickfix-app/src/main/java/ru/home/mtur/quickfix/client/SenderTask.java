@@ -115,6 +115,8 @@ public class SenderTask implements Runnable {
                             sendTimer.max(MICROSECONDS), sendTimer.mean(MICROSECONDS), mks(sP[0]), mks(sP[1]), mks(sP[2]));
                 }
 
+                SECONDS.sleep(5);
+
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }

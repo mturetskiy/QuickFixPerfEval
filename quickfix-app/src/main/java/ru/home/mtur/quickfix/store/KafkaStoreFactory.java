@@ -7,6 +7,8 @@ import quickfix.MessageStoreFactory;
 import quickfix.SessionID;
 import quickfix.SessionSettings;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 public class KafkaStoreFactory implements MessageStoreFactory {
@@ -14,6 +16,7 @@ public class KafkaStoreFactory implements MessageStoreFactory {
 
     private final SessionSettings settings;
     private final Properties kafkaProps;
+    private Map<SessionID, KafkaStore> stores = new HashMap<>();
 
     public KafkaStoreFactory(SessionSettings settings, Properties kafkaProps) {
         this.settings = settings;
@@ -22,10 +25,14 @@ public class KafkaStoreFactory implements MessageStoreFactory {
 
     @Override
     public MessageStore create(SessionID sessionID) {
-        return new KakfaStore(sessionID, settings, kafkaProps);
+        return stores.computeIfAbsent(sessionID, sId -> new KafkaStore(sId, settings, kafkaProps));
     }
 
     public SessionSettings getSettings() {
         return settings;
+    }
+
+    public void stop() {
+        stores.values().forEach(KafkaStore::stop);
     }
 }

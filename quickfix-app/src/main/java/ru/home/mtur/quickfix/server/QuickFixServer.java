@@ -18,20 +18,23 @@ import static quickfix.Acceptor.SETTING_SOCKET_ACCEPT_PORT;
 public class QuickFixServer {
     final static Logger log = LoggerFactory.getLogger(QuickFixServer.class);
 
+    public static final String DEFAULT_CONFIG_NAME = "/server-sessions.settings";
+    private String DEFAULT_KAFKA_PROPS_NAME = "/kafka-store.properties";
+
     private MessageProcessor processor;
     private AbstractSocketAcceptor acceptor;
-    private String kafkaSettingsFileName = "/kafka-store.properties";
+    private KafkaStoreFactory storeFactory;
 
     public QuickFixServer(String configFileName) throws ConfigError, FieldConvertError {
         this.processor = new MessageProcessor();
         Application application = new ServerApplication(processor);
 
         SessionSettings settings = ConfigUtils.loadSessionSettings(configFileName);
-        Properties kafkaClientProps = ConfigUtils.loadProperties(kafkaSettingsFileName);
+        Properties kafkaClientProps = ConfigUtils.loadProperties(DEFAULT_KAFKA_PROPS_NAME);
 
 //        MessageStoreFactory storeFactory = new MemoryStoreFactory();
 //        MessageStoreFactory storeFactory = new JdbcStoreFactory(settings);
-        MessageStoreFactory storeFactory = new KafkaStoreFactory(settings, kafkaClientProps);
+        storeFactory = new KafkaStoreFactory(settings, kafkaClientProps);
         LogFactory logFactory = new SLF4JLogFactory(settings);
         MessageFactory messageFactory = new DefaultMessageFactory();
 
@@ -58,14 +61,7 @@ public class QuickFixServer {
     }
 
     public static void main(String[] args) throws ConfigError, FieldConvertError {
-        if (args.length != 1) {
-            log.error("One argument with quickFix session settings config is required.");
-            return;
-        }
-
-        String configFileName = args[0];
-        log.info("Starting QuickFix server with config: {}", configFileName);
-
+        String configFileName = ConfigUtils.getAppConfig(args, DEFAULT_CONFIG_NAME);
         final QuickFixServer server = new QuickFixServer(configFileName);
         Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
 
@@ -85,6 +81,7 @@ public class QuickFixServer {
         log.info("Stopping QuickFixServer ...");
 
         acceptor.stop();
+        storeFactory.stop();
         processor.stop();
 
         log.info("Stopped QuickFixServer ...");
