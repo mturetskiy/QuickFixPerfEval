@@ -1,6 +1,5 @@
 package ru.home.mtur.quickfix.server;
 
-import org.apache.commons.cli.Options;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import quickfix.*;
@@ -21,6 +20,9 @@ public class QuickFixServer {
 
     public static final String DEFAULT_CONFIG_NAME = "/server-sessions.settings";
     private String DEFAULT_KAFKA_PROPS_NAME = "/kafka-store.properties";
+    private String SOCKET_ACCEPT_HOST_PROPERTY = "SocketAcceptAddress";
+    private String SOCKET_ACCEPT_DEFAULT = "localhost";
+
 
     private MessageProcessor processor;
     private AbstractSocketAcceptor acceptor;
@@ -34,6 +36,11 @@ public class QuickFixServer {
         Application application = new ServerApplication(processor);
 
         SessionSettings settings = ConfigUtils.loadSessionSettings(configFileName);
+        if (!settings.isSetting(SOCKET_ACCEPT_HOST_PROPERTY)) {
+            String acceptHost = ConfigUtils.getServerHost(args, SOCKET_ACCEPT_DEFAULT);
+            settings.setString(SOCKET_ACCEPT_HOST_PROPERTY, acceptHost);
+            log.info("Using server accept host: {}", acceptHost);
+        }
         Properties kafkaClientProps = ConfigUtils.loadProperties(DEFAULT_KAFKA_PROPS_NAME);
 
         MessageStoreFactory storeFactory = new MemoryStoreFactory();

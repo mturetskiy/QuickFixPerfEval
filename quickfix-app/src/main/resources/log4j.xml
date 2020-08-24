@@ -9,12 +9,10 @@
         </layout>
     </appender>
 
-    <logger name="quickfix.mina.message">
-        <level value="INFO"/>
-    </logger>
-    <logger name="org.apache.mina">
-        <level value="WARN"/>
-    </logger>
+    <logger name="quickfix.mina.message.FIXMessageDecoder"><level value="WARN"/></logger>
+    <logger name="org.apache.mina.filter.codec.ProtocolCodecFilter"><level value="WARN"/></logger>
+
+
     <logger name="quickfixj.msg.incoming">
         <level value="WARN"/>
     </logger>

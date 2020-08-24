@@ -1,5 +1,8 @@
 package ru.home.mtur.quickfix.server;
 
+import io.micrometer.core.instrument.*;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.core.instrument.step.StepCounter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import quickfix.Message;
@@ -22,15 +25,18 @@ public class MessageProcessor {
     private ScheduledExecutorService periodicPool;
     private volatile boolean isActive = false;
 
-    private AtomicLong processedMsgCount = new AtomicLong();
+    private MeterRegistry registry;
+    private StepCounter processedCounter;
 
-    // For stats calc:
-    private AtomicLong lastMeasureTimePoint = new AtomicLong();
-    private AtomicLong lastProcessedMsgCount = new AtomicLong();
+    private AtomicLong processedMsgCount = new AtomicLong();
 
     public MessageProcessor() {
         queue = new LinkedBlockingQueue<>();
         pool = createNamedPool("Worker", WORKER_THREAD_NUM);
+        this.registry = new SimpleMeterRegistry();
+        // This step counter rolled out every 1000 ms, so we need to call count() with the same rate, so prev counted value will be correct.
+        processedCounter = new StepCounter(new Meter.Id("processedMessages", Tags.empty(), null, null, Meter.Type.COUNTER), registry.config().clock(), 1000);
+
         periodicPool = Executors.newScheduledThreadPool(1, r -> new Thread(r, "MsgProcessor Scheduled"));
     }
 
@@ -44,34 +50,15 @@ public class MessageProcessor {
 
     public void start() {
         isActive = true;
-        lastMeasureTimePoint.set(System.currentTimeMillis());
 
         periodicPool.scheduleWithFixedDelay(() -> {
-//            log.info("Incoming queue size: {}", getQueueSize());
-
-            // Calc msg processing speed:
-            
-            long currentTimePoint = System.currentTimeMillis();
-            long currentProcessedMsgCount = processedMsgCount.get();
-            long prevTimePoint = lastMeasureTimePoint.getAndSet(currentTimePoint);
-            long prevProcessedMsgCount = lastProcessedMsgCount.getAndSet(currentProcessedMsgCount);
-
-            long elapsedTimeMs = currentTimePoint - prevTimePoint;
-            long processed = currentProcessedMsgCount - prevProcessedMsgCount;
-            double processingRate = (double) processed / elapsedTimeMs * 1000.0;
-
-            log.info("Processed msgs: {}. Message processing rate: {} m/s", currentProcessedMsgCount, (float)processingRate);
-
-
-
-
+            log.info("Processed msgs: {}. Message processing rate: {} m/s. ", processedMsgCount, (float) processedCounter.count());
         }, 0, 1000, TimeUnit.MILLISECONDS);
 
         pool.submit(() -> {
             log.info("Msg processor worker has been [started].");
             while (isActive)  {
                 try {
-//                    log.info("Waiting for some message from the queue for processing ...");
                     MsgHolder msg = queue.take();
                     processMessage(msg);
                 } catch (InterruptedException e) {
@@ -100,10 +87,10 @@ public class MessageProcessor {
     }
 
     private void processMessage(MsgHolder msg) throws InterruptedException {
+        processedCounter.increment();
         long currentMsgNum = processedMsgCount.getAndIncrement();
-        if (currentMsgNum % 10_000 == 0) {
+        if (currentMsgNum % 100_000 == 0) {
             log.info("Processing message: msgID: {}, session: {}, seqNum: {}", msg.getMsgId(), msg.getSessionID(), msg.getMsgSeq());
         }
-//        TimeUnit.MICROSECONDS.sleep(500);
     }
 }
