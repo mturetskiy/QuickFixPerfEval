@@ -1,5 +1,6 @@
 package ru.home.mtur.quickfix.utils;
 
+import org.apache.commons.cli.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import quickfix.*;
@@ -13,6 +14,13 @@ import static quickfix.SessionSettings.*;
 
 public class ConfigUtils {
     static final Logger log = LoggerFactory.getLogger(ConfigUtils.class);
+
+    public static CommandLineParser CLI_PARSER = new DefaultParser();
+    public static Options CLI_OPTIONS = new Options()
+            .addOption("client", "Run client app")
+            .addOption("server", "Run server app")
+            .addOption("p", true,"Config file name")
+            .addOption("h", true,"Server host (where to connect)");
 
     public static SessionSettings loadSessionSettings(String fileName) {
         SessionSettings settings = null;
@@ -55,13 +63,22 @@ public class ConfigUtils {
     }
 
     public static String getAppConfig(String[] args, String defaultConfig) {
-        if (args.length > 0) {
-            String arg = args[0];
-            log.info("Using given arg: [{}] as config file name", arg);
-            return arg;
-        } else {
-            log.info("Using default config file name: {}", defaultConfig);
-            return defaultConfig;
+        try {
+            CommandLine cmd = CLI_PARSER.parse(CLI_OPTIONS, args);
+            return cmd.getOptionValue("p", defaultConfig);
+        } catch (ParseException e) {
+            new HelpFormatter().printHelp( "<CLASS>", CLI_OPTIONS );
+            throw new IllegalArgumentException("Unable to parse command line args", e);
+        }
+    }
+
+    public static String getServerHost(String[] args, String defaultHost) {
+        try {
+            CommandLine cmd = CLI_PARSER.parse(CLI_OPTIONS, args);
+            return cmd.getOptionValue("h", defaultHost);
+        } catch (ParseException e) {
+            new HelpFormatter().printHelp( "<CLASS>", CLI_OPTIONS );
+            throw new IllegalArgumentException("Unable to parse command line args", e);
         }
 
     }

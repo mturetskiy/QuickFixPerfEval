@@ -1,5 +1,6 @@
 package ru.home.mtur.quickfix.server;
 
+import org.apache.commons.cli.Options;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import quickfix.*;
@@ -25,16 +26,19 @@ public class QuickFixServer {
     private AbstractSocketAcceptor acceptor;
     private KafkaStoreFactory storeFactory;
 
-    public QuickFixServer(String configFileName) throws ConfigError, FieldConvertError {
+    public QuickFixServer(String[] args) throws ConfigError, FieldConvertError {
+        String configFileName = ConfigUtils.getAppConfig(args, DEFAULT_CONFIG_NAME);
+        log.info("Using config: {}", configFileName);
+
         this.processor = new MessageProcessor();
         Application application = new ServerApplication(processor);
 
         SessionSettings settings = ConfigUtils.loadSessionSettings(configFileName);
         Properties kafkaClientProps = ConfigUtils.loadProperties(DEFAULT_KAFKA_PROPS_NAME);
 
-//        MessageStoreFactory storeFactory = new MemoryStoreFactory();
+        MessageStoreFactory storeFactory = new MemoryStoreFactory();
 //        MessageStoreFactory storeFactory = new JdbcStoreFactory(settings);
-        storeFactory = new KafkaStoreFactory(settings, kafkaClientProps);
+//        storeFactory = new KafkaStoreFactory(settings, kafkaClientProps);
         LogFactory logFactory = new SLF4JLogFactory(settings);
         MessageFactory messageFactory = new DefaultMessageFactory();
 
@@ -61,8 +65,7 @@ public class QuickFixServer {
     }
 
     public static void main(String[] args) throws ConfigError, FieldConvertError {
-        String configFileName = ConfigUtils.getAppConfig(args, DEFAULT_CONFIG_NAME);
-        final QuickFixServer server = new QuickFixServer(configFileName);
+        final QuickFixServer server = new QuickFixServer(args);
         Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
 
         server.start();

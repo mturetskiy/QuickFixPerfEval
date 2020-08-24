@@ -9,13 +9,15 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static quickfix.SessionSettings.*;
+import static quickfix.SessionSettings.SENDERCOMPID;
 import static ru.home.mtur.quickfix.utils.ConfigUtils.getDefaultSessionID;
 
 public class OneSessionQuickFixClient {
     static final Logger log = LoggerFactory.getLogger(OneSessionQuickFixClient.class);
 
     public static final String DEFAULT_CONFIG_NAME = "/client-session.settings";
+    private final String SOCKET_CONNECT_HOST_PARAM = "SocketConnectHost";
+    public static final String DEFAULT_CONNECT_HOST = "localhost";
     private static AtomicInteger nextClientID = new AtomicInteger();
 
     private SocketInitiator initiator;
@@ -24,13 +26,22 @@ public class OneSessionQuickFixClient {
     private int clientID;
     private SessionID sessionID;
 
-    public OneSessionQuickFixClient(String configFileName) throws ConfigError {
+    public OneSessionQuickFixClient(String[] args) throws ConfigError {
+        String configFileName = ConfigUtils.getAppConfig(args, DEFAULT_CONFIG_NAME);
+
+        log.info("Using config: {}", configFileName);
+
         this.clientID = nextClientID.incrementAndGet();
         SessionSettings sessionSettings = ConfigUtils.loadSessionSettings(configFileName);
 
+        if (!sessionSettings.isSetting(SOCKET_CONNECT_HOST_PARAM)) {
+            String connectToValue = ConfigUtils.getServerHost(args, DEFAULT_CONNECT_HOST);
+            sessionSettings.setString(SOCKET_CONNECT_HOST_PARAM, connectToValue);
+            log.info("Using server host: {}", connectToValue);
+        }
+
         String senderCompID = sessionSettings.getString(SENDERCOMPID);
         sessionSettings.setString(SENDERCOMPID, senderCompID + "-" + clientID);
-
 
 
         sessionID = getDefaultSessionID(sessionSettings);
@@ -50,8 +61,7 @@ public class OneSessionQuickFixClient {
     }
 
     public static void main(String[] args) throws ConfigError, InterruptedException {
-        String configFileName = ConfigUtils.getAppConfig(args, DEFAULT_CONFIG_NAME);
-        OneSessionQuickFixClient client = new OneSessionQuickFixClient(configFileName);
+        OneSessionQuickFixClient client = new OneSessionQuickFixClient(args);
         Runtime.getRuntime().addShutdownHook(new Thread(client::stop));
 
         client.start();

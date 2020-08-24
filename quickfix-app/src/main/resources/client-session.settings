@@ -3,7 +3,7 @@ ConnectionType=initiator
 HeartBtInt=30
 ReconnectInterval=60
 SocketConnectPort=15600
-SocketConnectHost=localhost
+#SocketConnectHost=localhost
 
 BeginString=FIX.4.4
 SenderCompID=QF_CLIENT
